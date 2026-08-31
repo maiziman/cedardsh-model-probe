@@ -61,18 +61,19 @@ jobs:
           ASSET: ${{ steps.pack.outputs.asset }}
           VERSION: ${{ steps.pack.outputs.version }}
         run: |
-          $notes = @"
+          $notes = @'
           Automatically detects reasoning levels and image input for custom OpenAI-compatible models in DeepSeek Harness.
 
           **Install in CedarDSH Desktop**
-          1. Download `$env:ASSET` and put it beside `DeepSeek-Harness.exe` and `dsh.cmd`. Do not extract it.
+          1. Download `{{ASSET}}` and put it beside `DeepSeek-Harness.exe` and `dsh.cmd`. Do not extract it.
           2. Close the app and run:
 
-          `.\dsh.cmd plugin --profile web add ".\$env:ASSET" --offline`
+          `.\dsh.cmd plugin --profile web add ".\{{ASSET}}" --offline`
 
           3. Reopen `DeepSeek-Harness.exe`. The plugin runs in the background; no extra configuration is required.
 
           Verified with DeepSeek Harness `0.1.2-alpha.2` from official tag `dsh-v0.1.2-alpha.2`.
-          "@
+          '@
+          $notes = $notes.Replace('{{ASSET}}', $env:ASSET)
           $notes | Set-Content -LiteralPath release-notes.md -Encoding utf8NoBOM
           gh release create "v$env:VERSION" $env:ASSET SHA256SUMS.txt --verify-tag --title "CedarDSH Model Probe v$env:VERSION" --notes-file release-notes.md --latest
