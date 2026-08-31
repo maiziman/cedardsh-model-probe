@@ -9,19 +9,14 @@
 
 ## 安装到 CedarDSH Desktop
 
-1. 下载 `CedarDSH-Model-Probe-v0.1.2.tgz`，不要解压。
-2. 把 TGZ 放进 CedarDSH Desktop 解压目录，也就是 `CedarDSH-Desktop.exe` 和 `dsh.cmd` 所在的文件夹。
-3. 关闭 CedarDSH Desktop，在这个文件夹中打开终端，运行：
-
-   ```powershell
-   .\dsh.cmd plugin --profile web add ".\CedarDSH-Model-Probe-v0.1.2.tgz" --offline
-   ```
-
+1. 从最新 Release 下载 `CedarDSH-Model-Probe-Windows-v0.1.3.zip`。
+2. 把 ZIP 放进 `CedarDSH-Desktop.exe` 和 `dsh.cmd` 所在文件夹，选择“全部解压”。
+3. 关闭 CedarDSH Desktop，打开解压出的插件文件夹，双击 `Install-Model-Probe.cmd`。
 4. 再次双击 `CedarDSH-Desktop.exe`。
 
-安装完成。插件没有单独窗口，也不需要手动修改配置。在 CedarDSH Desktop 中添加或保存 OpenAI-compatible 自定义提供方后，插件会在后台自动工作。
+安装完成。插件没有单独窗口，也不需要手动修改配置。添加或保存 OpenAI-compatible 自定义提供方后，插件会在后台自动工作。可以进入“设置 → 插件 → 全局插件”，搜索 `model-capabilities` 确认安装状态。
 
-如果使用全局安装的 DeepSeek Harness，把命令中的 `.\dsh.cmd` 换成 `dsh`。
+请保留解压出的插件文件夹，之后可直接使用其中的一键卸载文件。
 
 ## 它会做什么
 
@@ -35,17 +30,23 @@
 
 ## 卸载
 
-关闭 CedarDSH Desktop，在 `dsh.cmd` 所在文件夹中打开终端并运行：
+关闭 CedarDSH Desktop，双击插件文件夹中的 `Uninstall-Model-Probe.cmd`。卸载不会删除已经保存到模型设置中的能力。
+
+## 手动安装
+
+熟悉命令行的用户可以下载 TGZ，把它放到 `dsh.cmd` 所在文件夹，然后运行：
 
 ```powershell
-.\dsh.cmd plugin --profile web remove @maiziman/dsh-model-capabilities --offline
+New-Item -ItemType Directory -Force .\dsh-home\profiles\web\plugin-packages | Out-Null
+Copy-Item .\CedarDSH-Model-Probe-v0.1.3.tgz .\dsh-home\profiles\web\plugin-packages\
+.\dsh.cmd plugin --profile web add "file:plugin-packages/CedarDSH-Model-Probe-v0.1.3.tgz" --offline --ignore-scripts
 ```
 
-卸载不会删除已经保存到模型设置中的能力。
+如果使用全局安装的 DeepSeek Harness，请使用官方的 `dsh plugin --profile web add <package>` 命令。
 
 ## 兼容性
 
-v0.1.2 已通过官方标签 `dsh-v0.1.2-alpha.2` 的 DeepSeek Harness `0.1.2-alpha.2` 验证。Harness 仍处于预览阶段，未来上游结构变化时可能需要更新插件。
+v0.1.3 已通过官方标签 `dsh-v0.1.2-alpha.2` 的 DeepSeek Harness `0.1.2-alpha.2` 验证。Harness 仍处于预览阶段，未来上游结构变化时可能需要更新插件。
 
 ## 高级设置
 

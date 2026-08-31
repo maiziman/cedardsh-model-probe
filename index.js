@@ -206,6 +206,11 @@ async function reconcile(ctx, config, signal, attempted, tentative, active, isCu
           if (efforts !== undefined) {
             capability.reasoningEfforts = efforts
             capability.thinkingFormat = 'openai'
+          } else {
+            ctx.logger.info(
+              `model-capabilities: no selectable reasoning levels confirmed for ${providerName}/${model.id}; `
+              + 'valid levels must return reasoning while an invalid level does not',
+            )
           }
         }
       }

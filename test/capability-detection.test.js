@@ -187,7 +187,40 @@ describe('active probes', () => {
       config: resolveConfig({ requestTimeoutMs: 1_000, reasoningProbeEfforts: ['low', 'high', 'max'] }),
     })
     assert.deepEqual(efforts, { high: 'high' })
-    assert.deepEqual(bodies.map(body => body.reasoning_effort), ['__dsh_invalid_effort__', 'low', 'high', 'max'])
+    assert.deepEqual(bodies.map(body => body.reasoning_effort), [
+      '__dsh_invalid_effort__',
+      'low',
+      'high',
+      'max',
+      '__dsh_invalid_effort__',
+    ])
+  })
+
+  it('accepts a successful invalid-effort response without reasoning as a negative control', async () => {
+    const bodies = []
+    const efforts = await probeReasoningEfforts({
+      profile: { baseURL: 'http://127.0.0.1:3000/api' },
+      modelId: 'permissive-reasoner',
+      fetchImpl: async (_url, init) => {
+        const body = JSON.parse(init.body)
+        bodies.push(body)
+        if (body.reasoning_effort === '__dsh_invalid_effort__') {
+          return jsonResponse({ choices: [{ message: { reasoning: '', content: '323' } }] })
+        }
+        return jsonResponse({
+          choices: [{ message: { reasoning: `${body.reasoning_effort} trace`, content: '323' } }],
+        })
+      },
+      config: resolveConfig({ requestTimeoutMs: 1_000, reasoningProbeEfforts: ['low', 'high', 'max'] }),
+    })
+    assert.deepEqual(efforts, { high: 'high', low: 'low', max: 'max' })
+    assert.deepEqual(bodies.map(body => body.reasoning_effort), [
+      '__dsh_invalid_effort__',
+      'low',
+      'high',
+      'max',
+      '__dsh_invalid_effort__',
+    ])
   })
 
   it('rejects reasoning evidence when an invalid effort is silently ignored', async () => {
@@ -203,6 +236,28 @@ describe('active probes', () => {
     })
     assert.equal(efforts, undefined)
     assert.equal(calls, 1)
+  })
+
+  it('rejects levels when the repeated negative control starts returning reasoning', async () => {
+    let invalidCalls = 0
+    const efforts = await probeReasoningEfforts({
+      profile: { baseURL: 'http://127.0.0.1:3000/api' },
+      modelId: 'unstable-default-reasoner',
+      fetchImpl: async (_url, init) => {
+        const body = JSON.parse(init.body)
+        if (body.reasoning_effort !== '__dsh_invalid_effort__') {
+          return jsonResponse({ choices: [{ message: { reasoning: 'selected trace', content: '323' } }] })
+        }
+        invalidCalls++
+        return jsonResponse({ choices: [{ message: {
+          reasoning: invalidCalls === 1 ? '' : 'default trace',
+          content: '323',
+        } }] })
+      },
+      config: resolveConfig({ requestTimeoutMs: 1_000, reasoningProbeEfforts: ['high'] }),
+    })
+    assert.equal(efforts, undefined)
+    assert.equal(invalidCalls, 2)
   })
 
   it('requires the image answer to identify the hidden probe color', async () => {

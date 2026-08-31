@@ -1,6 +1,6 @@
 {
   "name": "@maiziman/dsh-model-capabilities",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Automatic reasoning and image capability detection for custom DeepSeek Harness models",
   "type": "module",
   "main": "index.js",

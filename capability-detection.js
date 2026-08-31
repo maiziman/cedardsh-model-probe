@@ -413,6 +413,27 @@ function reasoningEvidence(body) {
   return typeof message.content === 'string' && /<think>[\s\S]+<\/think>/iu.test(message.content)
 }
 
+/**
+ * Confirm that an invalid effort behaves as a negative control.
+ *
+ * Strict endpoints reject it with 400/422. Some compatible gateways instead
+ * return a normal answer while withholding reasoning; that response is also a
+ * valid control because supported efforts must produce positive evidence.
+ */
+async function acceptsReasoningNegativeControl(options) {
+  const { fetchImpl, url, headers, body, signal, config } = options
+  try {
+    const response = await fetchJson(fetchImpl, url, {
+      method: 'POST',
+      headers,
+      body,
+    }, { signal, config })
+    return !reasoningEvidence(response)
+  } catch (error) {
+    return error instanceof HttpStatusError && (error.status === 400 || error.status === 422)
+  }
+}
+
 /** Return text content from a chat-completions response. */
 function responseText(body) {
   const choices = isRecord(body) && Array.isArray(body.choices) ? body.choices : []
@@ -455,21 +476,22 @@ export async function probeReasoningEfforts(options) {
     max_tokens: config.probeMaxTokens,
     stream: false,
   })
-  try {
-    await fetchJson(fetchImpl, url, {
-      method: 'POST',
-      headers: requestHeaders(profile, apiKey, true),
-      body: bodyFor(INVALID_REASONING_EFFORT),
-    }, { signal, config })
-    return undefined
-  } catch (error) {
-    if (!(error instanceof HttpStatusError) || (error.status !== 400 && error.status !== 422)) return undefined
-  }
+  const headers = requestHeaders(profile, apiKey, true)
+  const invalidBody = bodyFor(INVALID_REASONING_EFFORT)
+  const negativeControl = () => acceptsReasoningNegativeControl({
+    fetchImpl,
+    url,
+    headers,
+    body: invalidBody,
+    signal,
+    config,
+  })
+  if (!await negativeControl()) return undefined
   const accepted = await mapConcurrent(config.reasoningProbeEfforts, config.probeConcurrency, async effort => {
     try {
       const body = await fetchJson(fetchImpl, url, {
         method: 'POST',
-        headers: requestHeaders(profile, apiKey, true),
+        headers,
         body: bodyFor(effort),
       }, { signal, config })
       return reasoningEvidence(body) ? effort : undefined
@@ -478,6 +500,7 @@ export async function probeReasoningEfforts(options) {
     }
   })
   const efforts = reasoningEfforts(accepted.filter(value => value !== undefined), { mandatory: true })
+  if (efforts !== undefined && !await negativeControl()) return undefined
   return efforts
 }
 
