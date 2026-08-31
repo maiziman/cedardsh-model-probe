@@ -10,14 +10,14 @@
 ## 安装到 CedarDSH Desktop
 
 1. 下载 `CedarDSH-Model-Probe-v0.1.2.tgz`，不要解压。
-2. 把 TGZ 放进 CedarDSH Desktop 解压目录，也就是 `DeepSeek-Harness.exe` 和 `dsh.cmd` 所在的文件夹。
+2. 把 TGZ 放进 CedarDSH Desktop 解压目录，也就是 `CedarDSH-Desktop.exe` 和 `dsh.cmd` 所在的文件夹。
 3. 关闭 CedarDSH Desktop，在这个文件夹中打开终端，运行：
 
    ```powershell
    .\dsh.cmd plugin --profile web add ".\CedarDSH-Model-Probe-v0.1.2.tgz" --offline
    ```
 
-4. 再次双击 `DeepSeek-Harness.exe`。
+4. 再次双击 `CedarDSH-Desktop.exe`。
 
 安装完成。插件没有单独窗口，也不需要手动修改配置。在 CedarDSH Desktop 中添加或保存 OpenAI-compatible 自定义提供方后，插件会在后台自动工作。
 
