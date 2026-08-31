@@ -1,118 +1,63 @@
-# DSH Custom API Capabilities
+<h1 align="center">CedarDSH Model Probe</h1>
 
-[Download v0.1.2](https://github.com/maiziman/deepseek-harness-portable/releases/tag/plugin-model-capabilities-v0.1.2) · [中文](README.zh.md)
+<p align="center"><strong>Automatically detects reasoning and image support for custom DeepSeek Harness models.</strong></p>
 
-**Automatically detects reasoning levels and image input for OpenAI-compatible custom models—without patching DSH or overriding explicit settings.**
+<p align="center">
+  <a href="https://github.com/maiziman/cedardsh-model-probe/releases/latest"><strong>Download the plugin</strong></a>
+  · <a href="README.zh.md">中文说明</a>
+</p>
 
-`@maiziman/dsh-model-capabilities` is an independent, opt-in DeepSeek Harness Bundle for custom `llm-pi-ai` providers. It uses public Harness services and leaves the official adapter unchanged, so an upstream dsh replacement cannot overwrite the plugin implementation.
+## Install in CedarDSH Desktop
 
-| Feature | Behavior |
-|---|---|
-| **Reasoning levels** | Reads declared effort metadata and, when permitted, records only levels confirmed by positive endpoint evidence. |
-| **Image input** | Reads declared vision metadata and can verify image understanding with generated inline test images on local endpoints. |
-| **Explicit settings win** | Fills only absent capability fields; a value chosen by the user or endpoint configuration is never replaced. |
-| **Public endpoints stay passive** | Reads metadata but makes no active, token-generating probe to a public endpoint by default. |
-| **Independent lifecycle** | Installs through the official `dsh plugin` command and has its own package, checksum, compatibility check, and Release. |
+1. Download `CedarDSH-Model-Probe-v0.1.2.tgz`. Do not extract it.
+2. Put the TGZ in the CedarDSH Desktop folder, beside `DeepSeek-Harness.exe` and `dsh.cmd`.
+3. Close CedarDSH Desktop. Open Terminal in that folder and run:
 
-## How discovery works
+   ```powershell
+   .\dsh.cmd plugin --profile web add ".\CedarDSH-Model-Probe-v0.1.2.tgz" --offline
+   ```
 
-The plugin observes the official `llm-pi-ai` settings namespace after an OpenAI Completions-compatible provider is saved. Other provider protocols are ignored. It reads declared capability metadata first, then applies revision-checked path mutations to that provider's `models` array. It only fills an absent `input` or `reasoningEfforts` field; an explicit model value, including `reasoningEfforts: false` or `input: [text]`, always wins.
+4. Double-click `DeepSeek-Harness.exe` again.
 
-Supported metadata includes OpenRouter `architecture.input_modalities`, `supported_parameters`, and `reasoning.supported_efforts`; OpenAI-compatible `supported_parameters: [reasoning_effort]`; and Ollama `/api/show` `vision` and `thinking` capabilities. Model names are never used as evidence.
+That is all. There is no separate plugin window and no configuration file to edit. Add or save a custom OpenAI-compatible provider in CedarDSH Desktop; the plugin works in the background.
 
-For a literal local or private-network endpoint whose metadata is incomplete, the default Bundle may make small background Chat Completions requests at plugin startup, after the settings document changes, and after the route's credential reference changes. A reasoning level is added only when the server rejects an invalid canary value and the valid request returns a reasoning field. Image input is added only when the model returns the exact color word for both randomly ordered private inline PNGs; explanatory or ambiguous answers fail the check. These probes do not block application startup and are attempted once per provider/model/credential configuration during a process lifetime.
+For a global DeepSeek Harness installation, run the same command with `dsh` instead of `.\dsh.cmd`.
 
-Public endpoints receive metadata requests only by default. This avoids silent billable inference calls. Set `activeProbePolicy: always` only for endpoints where the extra requests and their token cost are acceptable.
+## What it does
 
-## Install
+- Reads capability metadata supplied by OpenRouter, Ollama, and compatible model endpoints.
+- Detects supported reasoning levels and image input when a local endpoint omits that metadata.
+- Keeps every capability setting that the user or provider set explicitly.
+- Uses active test requests only for localhost and private-network endpoints by default.
+- Does not modify the official DeepSeek Harness adapter, so DSH updates do not overwrite the plugin.
 
-No DeepSeek Harness Pure Portable ZIP bundles or automatically installs this plugin. Download the versioned tarball and checksum from the [DSH Custom API Capabilities v0.1.2 Release](https://github.com/maiziman/deepseek-harness-portable/releases/tag/plugin-model-capabilities-v0.1.2), then verify and install it with the official Bundle workflow:
+The active tests use a fixed arithmetic prompt and two generated 32 × 32 color images. They do not read or upload user files. Public endpoints remain metadata-only unless the user explicitly changes the probe policy.
+
+## Remove
+
+Close CedarDSH Desktop, open Terminal beside `dsh.cmd`, and run:
 
 ```powershell
-$version = '0.1.2'
-$package = "maiziman-dsh-model-capabilities-$version.tgz"
-$release = "https://github.com/maiziman/deepseek-harness-portable/releases/download/plugin-model-capabilities-v$version"
-Invoke-WebRequest "$release/$package" -OutFile $package
-Invoke-WebRequest "$release/SHA256SUMS.txt" -OutFile SHA256SUMS.txt
-$expected = ((Get-Content SHA256SUMS.txt -Raw).Trim() -split '\s+')[0].ToLowerInvariant()
-$actual = (Get-FileHash $package -Algorithm SHA256).Hash.ToLowerInvariant()
-if ($actual -ne $expected) { throw 'plugin checksum mismatch' }
-.\dsh.cmd plugin --profile web add ".\$package" --offline
-.\dsh.cmd --profile web --dump-config
-```
-
-Run these commands from the extracted Pure Portable directory after closing `DeepSeek-Harness.exe`, then reopen the EXE. Pure Portable uses its bundled hash-pinned pnpm for this official command, and the downloaded `.tgz` needs no registry access. With a separate global dsh installation, replace `.\dsh.cmd` with `dsh`. Repeat the install command with a newer plugin Release to upgrade. Plugin Releases and portable ZIP Releases have separate versions and checksums.
-
-During local development, install this directory instead:
-
-```sh
-dsh plugin --profile web add ./plugins/dsh-model-capabilities
-dsh --profile web --dump-config
-```
-
-The package manifest declares `dsh.bundle.patch`, and `cordis.patch.yml` inserts the plugin as a later composition row. Removal does not alter model settings that were already confirmed and saved:
-
-```sh
 .\dsh.cmd plugin --profile web remove @maiziman/dsh-model-capabilities --offline
 ```
 
-For a separate global dsh installation, use `dsh` in place of `.\dsh.cmd`.
+Removing the plugin does not erase capabilities that were already saved in your model settings.
 
-## Configuration
+## Compatibility
 
-The shipped Bundle uses:
+Version 0.1.2 is verified with DeepSeek Harness `0.1.2-alpha.2` from official tag `dsh-v0.1.2-alpha.2`. Harness is still in preview, so a future upstream change may require a plugin update.
 
-```yaml
-- insert:
-    - id: model-capabilities
-      name: '@maiziman/dsh-model-capabilities'
-      config:
-        metadataDiscovery: true
-        activeProbePolicy: local-only
-        reasoningProbe: true
-        visionProbe: true
-        reasoningProbeEfforts: [low, high, max]
-        probeConcurrency: 1
-        requestTimeoutMs: 10000
-        probeMaxTokens: 128
-```
+## Advanced settings
 
-| Field | Meaning |
-|---|---|
-| `metadataDiscovery` | Read non-generating model metadata. |
-| `activeProbePolicy` | `never`, `local-only`, or `always`; `local-only` recognizes exact `localhost` plus literal loopback, link-local, RFC 1918, and unique-local IPv6 addresses. DNS names require `always`. |
-| `reasoningProbe` | Allow reasoning requests when the active-probe policy permits them. |
-| `visionProbe` | Allow the inline image request when the active-probe policy permits it. |
-| `reasoningProbeEfforts` | Effort spellings tested independently; only positively observed levels are saved. |
-| `probeConcurrency` | Maximum simultaneous reasoning probes for one model. |
-| `requestTimeoutMs` | Bound for each metadata or active request. |
-| `probeMaxTokens` | Maximum output tokens requested by a probe. |
+The defaults discover metadata, actively test local endpoints, and test reasoning levels `low`, `high`, and `max`. Maintainers can override the `model-capabilities` row in the profile's `cordis.patch.yml`; see [`cordis.patch.yml`](cordis.patch.yml) for the complete defaults.
 
-To override the defaults, target the `model-capabilities` row in the profile's own `cordis.patch.yml`. A later row configuration replaces the complete earlier configuration, so restate every field you want to keep.
-
-## Security and privacy
-
-API keys are resolved through `ctx.credentials` and used only in request headers. They are not written to model settings or logs. Requests reject redirects, responses are capped at 2 MiB, request time is bounded, and plugin disposal aborts in-flight requests. A relevant settings or credential change cancels the old discovery generation; stale responses are discarded, and a failed revision-checked write remains eligible for retry. The plugin recognizes its own settings notification, so a successful write does not repeat the probe. If a credential changes while an accepted write is still being persisted, its plugin-added fields remain tentative: the next generation revalidates them and removes only unchanged additions that no longer have positive evidence. Removing the provider or model clears that tentative ownership. Endpoint errors otherwise leave the current model settings untouched.
-
-The vision probe sends two generated 32 × 32 solid-color PNGs embedded in separate requests. It does not read or upload a user file. The reasoning probe sends a fixed arithmetic prompt plus one invalid-value canary. Set `activeProbePolicy: never` to disable all generating requests.
-
-## Test
+Run the local checks with:
 
 ```sh
 npm test
 npm pack --dry-run
 ```
 
-The test suite covers metadata formats, local-network classification, positive-evidence probes, explicit-setting preservation, credential resolution, and revision-checked writes.
+## License
 
-## Compatibility
-
-| DeepSeek Harness | Verification |
-|---|---|
-| `0.1.1-rc.2` | Official Bundle registration, profile boot, settings mutation, and packaged-runtime tests. |
-| `0.1.2-alpha.1` (`cd5ef814`) | Clean install of the v0.1.1 Release tarball through the exact tagged source's official `dsh plugin` command, complete `--dump-config`, profile boot, Settings/Credentials API review, update-event timing regression, and layered `compat` regression. |
-| `0.1.2-alpha.2` (`0a53fb55`) | Clean install of this v0.1.2 tarball, complete profile boot, and real local OpenAI-compatible model discovery for image input, reasoning efforts, and `compat.thinkingFormat`. |
-
-Every plugin Release tag repeats the clean official-source install, expanded-config check, and Web-profile boot against the exact tag, commit, and hash-pinned pnpm version in [`.github/plugin-compatibility.json`](../../.github/plugin-compatibility.json). Immediately before Draft creation and again before publication, it resolves the official tag and requires the same commit. It also builds a pure portable ZIP, rejects any ZIP that already contains the plugin, and installs the exact plugin candidate through that ZIP in offline mode without relying on global pnpm or Corepack caches. The Release is not published if any gate fails.
-
-Harness is still pre-release, so a future upstream settings schema may require a plugin update. A failed validation or concurrent edit is contained and leaves the last valid provider configuration serving requests. Portable release tracking is independent and never installs or updates this Bundle.
+[MIT](LICENSE)
